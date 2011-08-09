@@ -1,7 +1,7 @@
 package townyplus.listener;
 
 import ca.xshade.bukkit.towny.NotRegisteredException;
-import hooks.HTowny;
+import townyplus.hooks.HTowny;
 import org.bukkit.ChatColor;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;

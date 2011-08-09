@@ -1,12 +1,11 @@
 package townyplus;
 
-import hooks.HPerm;
+import townyplus.hooks.HPerm;
 import ca.xshade.bukkit.towny.object.Resident;
 import ca.xshade.bukkit.towny.object.TownBlock;
 import ca.xshade.bukkit.towny.object.WorldCoord;
-import com.nijiko.permissions.PermissionHandler;
-import hooks.HGuard;
-import hooks.HTowny;
+import townyplus.hooks.HGuard;
+import townyplus.hooks.HTowny;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
@@ -31,7 +30,6 @@ public class TownyPlus extends JavaPlugin {
     public static Set<Material> NearTownBlocks = new HashSet<Material>();
     public static Set<DamageCause> AllowDamageTypeInTown= new HashSet<DamageCause>();
     public static WorldCoord worldCoord;
-    public static PermissionHandler handler;
 
     public void onEnable() {
         //Load Subroutines & Hooks

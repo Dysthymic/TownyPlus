@@ -1,7 +1,7 @@
 package townyplus.listener;
 
 import ca.xshade.bukkit.towny.object.Town;
-import hooks.HTowny;
+import townyplus.hooks.HTowny;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityListener;

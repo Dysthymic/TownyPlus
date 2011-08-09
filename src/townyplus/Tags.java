@@ -1,17 +1,12 @@
 package townyplus;
 
-import hooks.HPerm;
-import ca.xshade.bukkit.towny.NotRegisteredException;
+import townyplus.hooks.HPerm;
 import ca.xshade.bukkit.towny.object.Town;
-import com.nijiko.permissions.Entry;
-import com.nijiko.permissions.Group;
-import com.nijiko.permissions.User;
-import hooks.HTowny;
+import townyplus.hooks.HTowny;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Properties;
@@ -19,6 +14,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import ru.tehkode.permissions.PermissionGroup;
 
 public class Tags implements CommandExecutor {
     static File folder;
@@ -63,7 +59,7 @@ public class Tags implements CommandExecutor {
             ((Player)cs).sendMessage("Town Tag: "+townTags.getProperty(vars[1]));
             return true;
         }
-        Player player = MC.server.getPlayer(vars[1]);
+        Player player = MC.getServer().getPlayer(vars[1]);
         if (player != null) vars[1] = player.getName();
 
         if ("update".equals(vars[0])) {
@@ -80,8 +76,8 @@ public class Tags implements CommandExecutor {
         if ("custom".equals(vars[0])) {
             if (vars.length<3) return false;
             if (! HPerm.has(cs, "townyplus.tag")) return false;
-            HPerm.handler.addUserInfo("world", MC.server.getPlayer(vars[1]).getName(), "prefix", vars[2]);
-            HPerm.handler.addUserInfo("world", MC.server.getPlayer(vars[1]).getName(), "customprefix", vars[2]);
+            //HPerm.handler.addUserInfo("world", MC.getServer().getPlayer(vars[1]).getName(), "prefix", vars[2]);
+            //HPerm.handler.addUserInfo("world", MC.getServer().getPlayer(vars[1]).getName(), "customprefix", vars[2]);
             ((Player)cs).sendMessage("Custom tag made for "+vars[1]);
             return true;
         }        
@@ -129,22 +125,17 @@ public class Tags implements CommandExecutor {
             if (townTags.containsKey(town.getName())) {
                 townTag = townTags.getProperty(town.getName());
                 MC.log("**"+townTag);
-            }
+            } else {
+				townTag = "&f[&7"+town.getName()+"&f]";
+			}
         }
         String prefix = "";
-        User user = HPerm.handler.getUserObject("world", player.getName());
-        LinkedHashSet<Entry> parents = user.getParents();
-        if (parents != null) {
-            Iterator<Entry> iter = parents.iterator();
-            while (iter.hasNext()) {
-                Entry entry = iter.next();
-                if (entry.getPrefix() != null) {
-                    if ((! townTags.contains(entry.getName())) && (! entry.getName().equals(player.getName()))) {
-                        prefix += entry.getPrefix();
-                    }
-                }
-            }
-        }
-        HPerm.setInfo(player,"prefix", prefix+townTag);
+		PermissionGroup[] groups = HPerm.handler.getUser(player).getGroups();
+		if (groups.length == 0) return;
+		String result = "";
+		for (int i=0;i<groups.length;i++) {
+			result += groups[i].getPrefix();
+		}
+		HPerm.getUser(player).setPrefix(result+townTag, null);
     }
 }

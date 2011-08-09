@@ -1,6 +1,6 @@
 //*** Hook Designed by spathwalker. Plugins (c) their respective owners.
 
-package hooks;
+package townyplus.hooks;
 
 import ca.xshade.bukkit.towny.NotRegisteredException;
 import ca.xshade.bukkit.towny.Towny;
@@ -19,7 +19,7 @@ public class HTowny {
     public static TownyUniverse universe;
     
     public static boolean load() {
-        handler = (Towny) MC.server.getPluginManager().getPlugin("Towny");
+        handler = (Towny) MC.getServer().getPluginManager().getPlugin("Towny");
         if (handler == null) return false;
         universe = handler.getTownyUniverse();
         hooked = true;

@@ -3,7 +3,7 @@ package townyplus;
 import ca.xshade.bukkit.towny.object.Resident;
 import ca.xshade.bukkit.towny.object.Town;
 import ca.xshade.bukkit.util.ChatTools;
-import hooks.HTowny;
+import townyplus.hooks.HTowny;
 import java.util.Iterator;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -18,7 +18,7 @@ public class CmdList implements CommandExecutor {
         Player player = (Player)sender;
         String playerString = "";
         if (strings.length == 0) {
-            player.sendMessage(ChatTools.formatTitle(MC.server.getOnlinePlayers().length +" Players Online"));
+            player.sendMessage(ChatTools.formatTitle(MC.getServer().getOnlinePlayers().length +" Players Online"));
             //Non Towned
             Player[] online = HTowny.universe.getOnlinePlayers();
             for (Integer i=0;i<online.length;i++) {

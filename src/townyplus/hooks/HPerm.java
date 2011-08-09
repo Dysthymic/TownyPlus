@@ -1,26 +1,29 @@
 //*** Hook Designed by spathwalker. Plugins (c) their respective owners.
 
-package hooks;
+package townyplus.hooks;
 
-import com.nijiko.permissions.PermissionHandler;
-import com.nijikokun.bukkit.Permissions.Permissions;
 import java.util.Arrays;
 import java.util.List;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
+import ru.tehkode.permissions.PermissionManager;
+import ru.tehkode.permissions.PermissionUser;
+import ru.tehkode.permissions.bukkit.PermissionsEx;
 import townyplus.MC;
 
 public class HPerm {
-    public static PermissionHandler handler;
+    public static PermissionManager handler;
     public static boolean hooked = false;
-    
+
     public static boolean load() {
-        Plugin permissionsPlugin = MC.server.getPluginManager().getPlugin("Permissions");
-        if (permissionsPlugin == null) return false;
-        handler = ((Permissions) permissionsPlugin).getHandler();
-        hooked = true;
-        return true;
+		//Using Permisisons EX
+		if(MC.getServer().getPluginManager().isPluginEnabled("PermissionsEx")){
+			handler = PermissionsEx.getPermissionManager();
+	        hooked = true;
+	        return true;
+	    } else {
+			return false;
+		}
     }
     
     public static boolean has(CommandSender cs, String action) {
@@ -60,13 +63,15 @@ public class HPerm {
     
     public static String getInfo(Player player, String action) {
         if (handler == null) return "";
-        return handler.getInfoString(player.getWorld().getName(), player.getName(), action, false);
+        return handler.getUser(player).getOption(action);
     }
     
-    public static boolean setInfo(Player player, String action, String value) {
-        if (handler == null) return false;
-        handler.addUserInfo("world", player.getName(), action, value);
-        return true;
+    public static void setInfo(Player player, String action, String value) {
+        if (handler == null) return;
+        handler.getUser(player).setOption(action, value);
     }
     
+	public static PermissionUser getUser(Player player) {
+		return handler.getUser(player);
+	}	
 }

@@ -1,6 +1,6 @@
 //*** Hook Designed by spathwalker. Plugins (c) their respective owners.
 
-package hooks;
+package townyplus.hooks;
 
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
@@ -14,7 +14,7 @@ public class HGuard {
     public static boolean hooked = false;
 
     public static boolean load() {
-        handler = (WorldGuardPlugin) MC.server.getPluginManager().getPlugin("WorldGuard");
+        handler = (WorldGuardPlugin) MC.getServer().getPluginManager().getPlugin("WorldGuard");
         if (handler == null) return false;
         hooked = true;
         return true;
