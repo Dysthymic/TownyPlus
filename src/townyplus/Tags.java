@@ -76,9 +76,14 @@ public class Tags implements CommandExecutor {
         if ("custom".equals(vars[0])) {
             if (vars.length<3) return false;
             if (! HPerm.has(cs, "townyplus.tag")) return false;
-            //HPerm.handler.addUserInfo("world", MC.getServer().getPlayer(vars[1]).getName(), "prefix", vars[2]);
-            //HPerm.handler.addUserInfo("world", MC.getServer().getPlayer(vars[1]).getName(), "customprefix", vars[2]);
-            ((Player)cs).sendMessage("Custom tag made for "+vars[1]);
+			Player target = MC.getServer().getPlayer(vars[1]);
+			if (target == null) {
+				cs.sendMessage("Player must be online to add/edit custom tags.");
+				return true;
+			}
+            HPerm.handler.getUser(target).setOption("townyplus.tag.custom", vars[2]);
+			update(target);
+			((Player)cs).sendMessage("Custom tag made for "+target.getName());
             return true;
         }        
         return false;
@@ -130,12 +135,13 @@ public class Tags implements CommandExecutor {
 			}
         }
         String prefix = "";
+		
 		PermissionGroup[] groups = HPerm.handler.getUser(player).getGroups();
 		if (groups.length == 0) return;
 		String result = "";
 		for (int i=0;i<groups.length;i++) {
 			result += groups[i].getPrefix();
 		}
-		HPerm.getUser(player).setPrefix(result+townTag, null);
+		HPerm.getUser(player).setPrefix(result+HPerm.getUser(player).getOption("townyplus.tag.custom")+townTag, null);
     }
 }
