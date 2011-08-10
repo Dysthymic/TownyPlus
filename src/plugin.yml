@@ -2,6 +2,7 @@ name: TownyPlus
 version: 1.3.0
 main: townyplus.TownyPlus
 author: spathwalker
+softdepend: [PermissionsEx]
 commands:
   tc:
     description: Enables/disables town chat.

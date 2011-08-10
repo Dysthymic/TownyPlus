@@ -72,6 +72,7 @@ public class HPerm {
     }
     
 	public static PermissionUser getUser(Player player) {
+        if (handler == null) return null;
 		return handler.getUser(player);
 	}	
 }

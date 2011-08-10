@@ -21,12 +21,13 @@ public class Tags implements CommandExecutor {
     static Properties townTags = new Properties();
     
     public boolean onCommand(CommandSender cs, Command cmnd, String string, String[] vars) {
-        if (vars.length==0) {
+		if (vars.length==0) {
             if (!(cs instanceof Player)) return false;
             update((Player)cs);
             cs.sendMessage("Tag updated.");
             return true;
         }
+		vars[0] = vars[0].toLowerCase();
         if (("?".equals(vars[0])) || ("help".equals(vars[0]))) {
             cs.sendMessage("--Tag Actions--");
             cs.sendMessage("/tag - Updates your own tag.");
@@ -38,15 +39,15 @@ public class Tags implements CommandExecutor {
             cs.sendMessage("/tag custom (player name) (tag) - Creates custom tag.");
             return true;
         }
-        if ("add".equals(vars[0])) {
+        if ("add set".contains(vars[0])) {
             if (vars.length<3) return false;
             if (! HPerm.has(cs, "townyplus.tag")) return false;
             townTags.setProperty(vars[1], vars[2]);
             save();
-            ((Player)cs).sendMessage("Tag updated");
+            cs.sendMessage("Tag updated");
             return true;
         }
-        if ("del".equals(vars[0])) {
+        if ("del delete remove".contains(vars[0])) {
             if (vars.length<2) return false;
             if (! HPerm.has(cs, "townyplus.tag")) return false;
             townTags.remove(townTags.get(vars[1]));
@@ -59,6 +60,10 @@ public class Tags implements CommandExecutor {
             ((Player)cs).sendMessage("Town Tag: "+townTags.getProperty(vars[1]));
             return true;
         }
+		if (vars.length<2) {
+			cs.sendMessage("Invalid command. See /tag ?");
+			return true;
+		}
         Player player = MC.getServer().getPlayer(vars[1]);
         if (player != null) vars[1] = player.getName();
 
@@ -74,19 +79,33 @@ public class Tags implements CommandExecutor {
             return true;
         }
         if ("custom".equals(vars[0])) {
-            if (vars.length<3) return false;
-            if (! HPerm.has(cs, "townyplus.tag")) return false;
+            if (! HPerm.has(cs, "townyplus.tag")) {
+				cs.sendMessage("You don't have permission to modify tags.");
+				return true;
+			}
+            if (vars.length<2) {
+				cs.sendMessage("Must include name");
+				return true;
+			}
 			Player target = MC.getServer().getPlayer(vars[1]);
 			if (target == null) {
 				cs.sendMessage("Player must be online to add/edit custom tags.");
 				return true;
 			}
-            HPerm.handler.getUser(target).setOption("townyplus.tag.custom", vars[2]);
+			//clear old tag
+			if (vars.length<3) {
+	            //HPerm.handler.getUser(target).setOption("townyplus.tag.custom", "");
+				cs.sendMessage("Custom tag removed.");
+				update(target);
+				return true;
+			}
+            //HPerm.handler.getUser(target).setOption("townyplus.tag.custom", vars[2]);
 			update(target);
 			((Player)cs).sendMessage("Custom tag made for "+target.getName());
             return true;
         }        
-        return false;
+		cs.sendMessage("Unable to verify command. See /tag ?");
+        return true;
     }
     
     public static boolean load(File folder) {
@@ -122,26 +141,23 @@ public class Tags implements CommandExecutor {
         if (player == null) return;
         if (HPerm.handler == null) return;
         if (! HTowny.hooked) return;
-        String townTag = "";
         //From Town
         Town town = HTowny.getTown(player.getName());
-        if (town != null) {
-            MC.log("**"+town.getName());
-            if (townTags.containsKey(town.getName())) {
-                townTag = townTags.getProperty(town.getName());
-                MC.log("**"+townTag);
-            } else {
-				townTag = "&f[&7"+town.getName()+"&f]";
-			}
-        }
-        String prefix = "";
-		
-		PermissionGroup[] groups = HPerm.handler.getUser(player).getGroups();
-		if (groups.length == 0) return;
+		//String custom = HPerm.getInfo(player,"townyplus.tag.custom");
 		String result = "";
-		for (int i=0;i<groups.length;i++) {
-			result += groups[i].getPrefix();
+		PermissionGroup[] groups = HPerm.handler.getUser(player).getGroups();
+		if (groups.length>0) for (PermissionGroup group: groups) {
+			result += group.getPrefix();
 		}
-		HPerm.getUser(player).setPrefix(result+HPerm.getUser(player).getOption("townyplus.tag.custom")+townTag, null);
+		player.sendMessage(result);
+        if (town != null) {
+            if (townTags.containsKey(town.getName())) {
+                HPerm.getUser(player).setPrefix(result+townTags.getProperty(town.getName()),null);
+            } else {
+				HPerm.getUser(player).setPrefix(result+"&f[&7"+town.getName()+"&f]",null);
+			}
+        } else {
+			HPerm.getUser(player).setPrefix(result,null);
+		}
     }
 }
