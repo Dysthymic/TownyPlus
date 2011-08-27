@@ -1,4 +1,4 @@
-//*** Hook Designed by spathwalker. Plugins (c) their respective owners.
+//PermssionsEx Hook v2.0
 
 package townyplus.hooks;
 
@@ -6,26 +6,22 @@ import java.util.Arrays;
 import java.util.List;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 import ru.tehkode.permissions.PermissionManager;
 import ru.tehkode.permissions.PermissionUser;
 import ru.tehkode.permissions.bukkit.PermissionsEx;
-import townyplus.MC;
 
 public class HPerm {
-    public static PermissionManager handler;
-    public static boolean hooked = false;
+    public static PermissionManager handler = null;
 
-    public static boolean load() {
-		//Using Permisisons EX
-		if(MC.getServer().getPluginManager().isPluginEnabled("PermissionsEx")){
-			handler = PermissionsEx.getPermissionManager();
-	        hooked = true;
-	        return true;
-	    } else {
+    public static boolean load(JavaPlugin plugin) {
+		if(! plugin.getServer().getPluginManager().isPluginEnabled("PermissionsEx")){
 			return false;
 		}
-    }
-    
+		handler = PermissionsEx.getPermissionManager();
+		return true;
+	}
+
     public static boolean has(CommandSender cs, String action) {
         //Console and Ops always aproved
         if (!(cs instanceof Player)) return true;

@@ -1,9 +1,13 @@
 name: TownyPlus
-version: 1.3.0
-main: townyplus.TownyPlus
+version: 2.0.0
+main: townyplus.Main
 author: spathwalker
 softdepend: [PermissionsEx]
 commands:
+  townyplus:
+    description: see /townyplus ?
+  tax:
+    description: see /tax ?
   tc:
     description: Enables/disables town chat.
   nc:

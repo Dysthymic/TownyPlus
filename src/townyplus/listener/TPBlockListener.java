@@ -4,6 +4,8 @@ import ca.xshade.bukkit.towny.NotRegisteredException;
 import ca.xshade.bukkit.towny.object.Resident;
 import ca.xshade.bukkit.towny.object.Town;
 import com.sk89q.worldguard.protection.ApplicableRegionSet;
+import java.util.Arrays;
+import java.util.List;
 import townyplus.hooks.HTowny;
 import townyplus.hooks.HGuard;
 import townyplus.hooks.HPerm;
@@ -16,9 +18,12 @@ import org.bukkit.event.block.BlockListener;
 import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
-import townyplus.TownyPlus;
+import townyplus.Main;
 
 public class TPBlockListener extends BlockListener {
+    public static List<Material> NearTownBlocks = Arrays.asList(
+        Material.LAVA_BUCKET, Material.WATER_BUCKET,
+        Material.LAVA, Material.WATER);
 
     @Override
     public void onBlockPlace(BlockPlaceEvent event) {
@@ -27,11 +32,11 @@ public class TPBlockListener extends BlockListener {
         Player target = event.getPlayer();
         Block block = event.getBlock();
         //Check if not on disallowed list
-        if (!(TownyPlus.NearTownBlocks.contains(block.getType()))) return;
+        if (!(NearTownBlocks.contains(block.getType()))) return;
         //Check if in town
         if (HTowny.getTown(block.getLocation()) != null) return;
         //Get My Town
-        Town myTown = HTowny.getTown(event.getPlayer().getName());
+        Town myTown = HTowny.getTown(event.getPlayer());
         boolean canDo = true;
         if (! canPlace(event.getPlayer(),myTown,block.getRelative(+12,0,0))) canDo = false;
         if (! canPlace(event.getPlayer(),myTown,block.getRelative(-12,0,0))) canDo = false;
