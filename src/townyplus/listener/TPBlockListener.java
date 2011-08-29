@@ -28,7 +28,7 @@ public class TPBlockListener extends BlockListener {
     @Override
     public void onBlockPlace(BlockPlaceEvent event) {
         if (event.isCancelled()) return;
-        if (HPerm.has(event.getPlayer(), "townyplus.piston")) return;
+        if (HPerm.has(event.getPlayer(), "townyplus.admin")) return;
         Player target = event.getPlayer();
         Block block = event.getBlock();
         //Check if not on disallowed list

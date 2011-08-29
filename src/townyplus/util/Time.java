@@ -21,7 +21,11 @@ public class Time {
 	public static String getTime(long time) {
 		return DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(time));
 	}	
-	
+
+	public static String getDate(long time) {
+		return DateFormat.getDateInstance(DateFormat.SHORT).format(new Date(time));
+	}
+
 	public static long now() {
 		return System.currentTimeMillis();
 	}
@@ -35,5 +39,6 @@ public class Time {
             return (time/hour)+" hour"+((time/hour>1) ?  "s" : "");
         }
         return (time/minute)+" minute"+((time/minute>1) ?  "s" : "");
-    }	
+    }
+
 }

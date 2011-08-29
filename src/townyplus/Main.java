@@ -56,7 +56,6 @@ public class Main extends Core {
 	}
 
 	public void onDisable() {
-		config.save();
 		data.save();
 		getServer().getScheduler().cancelTask(taxTask);
 		log(Level.INFO,"Plugin disabled.");

@@ -18,6 +18,7 @@ import org.bukkit.event.player.PlayerListener;
 import townyplus.Data;
 import townyplus.Main;
 import townyplus.base.Core;
+import townyplus.hooks.HPerm;
 
 public class TPPlayerListener extends PlayerListener {
     public static List<Material> ProtectedBlocks = Arrays.asList(
@@ -39,6 +40,7 @@ public class TPPlayerListener extends PlayerListener {
     public static boolean canUse(Player player, Block block) {
         if (block == null) return true;
         if (player.isOp()) return true;
+		if (HPerm.has(player, "townyplus.admin")) return true;
         if (HTowny.handler == null) return false;
         if (! ProtectedBlocks.contains(block.getType())) return true;
         TownBlock plot = HTowny.getPlot(block.getLocation());

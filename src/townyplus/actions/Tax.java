@@ -73,7 +73,30 @@ public class Tax implements CommandExecutor {
 			Core.send(cs,"&4You do not have permission for this command.");
 			return true;
 		}
-		if ("now".contains(vars[0])) return taxNow();
+		if ("now".contains(vars[0])) {
+			Core.send(cs,"&2Taking taxes out now for all towns.");
+			taxNow();
+			return true;
+		}
+		if ("reload".contains(vars[0])) {
+			Core.send(cs,"&2Tax system reloaded.");
+			Main.config.save();
+			return true;
+		}
+		if ("townnow".contains(vars[0])) {
+			if (vars.length<2) {
+				Core.send(cs,"&4Town name must be listed to tax.");
+				return true;
+			}
+			Town town = HTowny.getTown(vars[1]);
+			if (town == null) {
+				Core.send(cs,"&4Invalid Town");
+				return true;
+			}
+			taxTown(town);
+			return true;
+		}		
+		Core.send(cs,"&4Unknown Command");
 		return true;
 	}
 
@@ -88,7 +111,10 @@ public class Tax implements CommandExecutor {
 		Core.send(cs,"&a/town set (taxes/plottax) $ &2Sets taxes per resident or plot.");
 		Core.send(cs,"&a/tax due &2Lists everyone in your town who owes taxes.");
 		Core.send(cs,"&a/tax collect &2Attempts to collect on all past due amounts.");
-		Core.send(cs,"&7(Admin Only): &a/tax now &2 Withdraws taxes now.");
+		if (HPerm.has(cs, "townyplus.tax.admin")) {
+			Core.send(cs,"&7(Admin Only): &a/tax now &2 Withdraws taxes now.");
+			Core.send(cs,"&7(Admin Only): &a/tax reload &2 reloads config/tax data.");
+		}
 		return true;
 	}
 	
@@ -196,105 +222,124 @@ public class Tax implements CommandExecutor {
 	
 	public static boolean taxNow() {
 		//Set Up Logger
+		if ((Boolean)Config.town_upkeep.get("pay") == false) {
+			logger.log(Level.INFO,"\n\nTaxes not applied on "+Time.toStr(System.currentTimeMillis())+": Taxes turned off.");
+			return true;
+		}
 		Core.instance.getServer().broadcastMessage(ChatColor.DARK_GREEN+"[Broadcast] Taxes taken out.");
 		Data.lastTax = System.currentTimeMillis();
+		Data.saveAll();
 		logger.log(Level.INFO,"\n\nTaxes applied on "+Time.toStr(System.currentTimeMillis()));
-		towns: 
-		for (Town town: HTowny.getUniverse().getTowns()) {
-			logger.log(Level.INFO,"Town: "+town.getName());
-			logger.log(Level.INFO,"  Balance: "+getBalance(town));
-			logger.log(Level.INFO,"  Taxes Extimate: $"+getIncome(town));
-			//Taxes
-			for (Resident res:town.getResidents()) {
-				//Upkeep Per Residents, non-town Admin
-				if (isTownAdmin(res)) continue;
-				String id = town.getName()+" "+res.getName();
-				int tax = getTax(res);
-				try {
-					double due = getPastDue(id) + getTax(res);
-					double balance = res.getHoldingBalance();
-					if (due == 0) continue;
-					//If person doesn't have enough
-					if (due > balance) {
-						//Pay what you can, past due amount for rest
-						setPastDue(id, due-balance);
-						logger.log(Level.INFO,"    ! "+res.getName()+" is past due $"+(due-balance));
-						Main.log("");
-						due = balance;
-					} else {
-						setPastDue(id, 0.0);
-					}
-					logger.log(Level.INFO,"    "+res.getName()+" paid $"+(due));
-					res.pay(due);
-					town.collect(due);
-				} catch (IConomyException ex) {
-					Core.log(Level.SEVERE,"Error when taxing "+res.getName()+" from town "+town.getName());
-					logger.log(Level.SEVERE,"Error with taxing "+res.getName()+" from town "+town.getName(),ex);
-				}
-			}
-			Main.data.save();
-			//Upkeep
+		Iterator<Town> iter = HTowny.getUniverse().getTowns().iterator();
+		while (iter.hasNext()) {
+			taxTown(iter.next());
+		}
+		return true;
+	}
+	
+	public static void taxTown(Town town) {
+		String date = Time.getDate(System.currentTimeMillis());
+		logger.log(Level.INFO,date+" Town: "+town.getName());
+		logger.log(Level.INFO,"  Balance: "+getBalance(town));
+		logger.log(Level.INFO,"  Taxes Extimate: $"+getIncome(town));
+		//Taxes
+		residents:
+		for (Resident res:town.getResidents()) {
+			//Upkeep Per Residents, non-town Admin
+			if (isTownAdmin(res)) continue residents;
+			String id = town.getName()+" "+res.getName();
+			int tax = getTax(res);
 			try {
-				double balance = town.getHoldingBalance();
-				double upkeep = getUpkeep(town);
-				//Pay if can
+				double due = getPastDue(id) + getTax(res);
+				double balance = res.getHoldingBalance();
+				if (due == 0) continue residents;
+				//If person doesn't have enough
+				if (due > balance) {
+					//Pay what you can, past due amount for rest
+					setPastDue(id, due-balance);
+					logger.log(Level.INFO,"    ! "+res.getName()+" is past due $"+(due-balance));
+					Main.log("");
+					due = balance;
+				} else {
+					setPastDue(id, 0.0);
+				}
+				logger.log(Level.INFO,"    "+res.getName()+" paid $"+(due));
+				res.pay(due);
+				town.collect(due);
+			} catch (IConomyException ex) {
+				Core.log(Level.SEVERE,"Error when taxing "+res.getName()+" from town "+town.getName());
+				logger.log(Level.SEVERE,"Error with taxing "+res.getName()+" from town "+town.getName(),ex);
+			}
+		}
+		Main.data.save();
+		//Upkeep
+		try {
+			double balance = town.getHoldingBalance();
+			double upkeep = getUpkeep(town);
+			//Pay if can
+			if (town.canPayFromHoldings(upkeep)) {
+				town.pay(upkeep);
+				logger.log(Level.INFO,"  Upkeep $"+upkeep+" Paid.");
+				logger.log(Level.INFO,"  New Balanace: $"+getBalance(town));
+				return;
+			}
+			Core.instance.getServer().broadcastMessage(ChatColor.RED+"[Broadcast] "+town.getName()+" is falling apart.");
+			double refund = (Double)Config.town_upkeep.get("plot_loss_refund");
+			//Take away unowned plots first
+			logger.log(Level.WARNING,"  ! Unable to pay upkeep $"+upkeep+"");
+			logger.log(Level.INFO,"  Refund per block at $"+refund);
+			logger.log(Level.WARNING,"  ! Removing unowned blocks first...");
+			
+			Iterator<TownBlock> iterTB = town.getTownBlocks().iterator();
+			while (iterTB.hasNext()) {
+				TownBlock block = iterTB.next();
+				if (block.hasResident()) continue;
+				try {
+					if (block == town.getHomeBlock()) continue;
+				} catch (TownyException ex) {
+					logger.log(Level.SEVERE, "  Error removing unowned blocks", ex);
+				}
+				HTowny.handler.getTownyUniverse().removeTownBlock(block);
+				town.collect(refund);
+				logger.log(Level.WARNING,"    Lost block "+block.getX()+","+block.getZ());
 				if (town.canPayFromHoldings(upkeep)) {
 					town.pay(upkeep);
 					logger.log(Level.INFO,"  Upkeep $"+upkeep+" Paid.");
 					logger.log(Level.INFO,"  New Balanace: $"+getBalance(town));
-					continue towns;
+					return;
 				}
-				Core.instance.getServer().broadcastMessage(ChatColor.RED+"[Broadcast] "+town.getName()+" is falling apart.");
-				double refund = (Double)Config.town_upkeep.get("plot_loss_refund");
-				//Take away unowned plots first
-				logger.log(Level.WARNING,"  ! Unable to pay upkeep $"+upkeep+"");
-				logger.log(Level.INFO,"  Refund per block at $"+refund);
-				logger.log(Level.WARNING,"  ! Removing unowned blocks first...");
-				for (TownBlock block: town.getTownBlocks()) {
-					if (block.hasResident()) continue;
-					try {
-						if (block == town.getHomeBlock()) continue;
-					} catch (TownyException ex) {
-						logger.log(Level.SEVERE, "  Error removing unowned blocks", ex);
-					}
-					HTowny.handler.getTownyUniverse().removeTownBlock(block);
-					town.collect(refund);
-					logger.log(Level.WARNING,"    Lost block "+block.getX()+","+block.getZ());
-					if (! town.canPayFromHoldings(upkeep)) continue;
-					town.pay(upkeep);
-					logger.log(Level.INFO,"  Upkeep $"+upkeep+" Paid.");
-					logger.log(Level.INFO,"  New Balanace: $"+getBalance(town));
-					continue towns;
-				}
-				//Take away owned blocks
-				logger.log(Level.WARNING,"  ! Unowned blocks not enough. Removing owned blocks..");
-				for (TownBlock block: town.getTownBlocks()) {
-					try {
-						if (block == town.getHomeBlock()) continue;
-					} catch (TownyException ex) {
-						logger.log(Level.SEVERE, "  Error removing owned blocks", ex);
-					}
-					HTowny.handler.getTownyUniverse().removeTownBlock(block);
-					logger.log(Level.WARNING,"  Lost block "+block.getX()+","+block.getZ());
-					town.collect(refund);
-					if (! town.canPayFromHoldings(upkeep)) continue;
-					town.pay(upkeep);
-					logger.log(Level.INFO,"  Upkeep $"+upkeep+" Paid.");
-					logger.log(Level.INFO,"  New Balanace: $"+getBalance(town));
-					continue towns;
-				}
-				//Break Apart Town
-				Core.instance.getServer().broadcastMessage(ChatColor.RED+"[Broadcast] "+town.getName()+" has fallen into ruin.");	
-				HTowny.handler.getTownyUniverse().removeTown(town);
-				removePastDue(town);
-				logger.log(Level.WARNING,"  ! Town Fell into Ruin");
-			} catch (IConomyException ex) {
-				Core.log(Level.SEVERE,"Error with upkeep for "+town.getName());
-				logger.log(Level.SEVERE,"Error with upkeep for "+town.getName(),ex);
 			}
+			//Take away owned blocks
+			logger.log(Level.WARNING,"  ! Unowned blocks not enough. Removing owned blocks..");
+			Iterator<TownBlock> iterTB2 = town.getTownBlocks().iterator();
+			while (iterTB2.hasNext()) {
+				TownBlock block = iterTB2.next();
+				try {
+					if (block == town.getHomeBlock()) continue;
+				} catch (TownyException ex) {
+					logger.log(Level.SEVERE, "  Error removing owned blocks", ex);
+				}
+				HTowny.handler.getTownyUniverse().removeTownBlock(block);
+				town.collect(refund);
+				logger.log(Level.WARNING,"  Lost block "+block.getX()+","+block.getZ());
+				if (town.canPayFromHoldings(upkeep)) {
+					town.pay(upkeep);
+					logger.log(Level.INFO,"  Upkeep $"+upkeep+" Paid.");
+					logger.log(Level.INFO,"  New Balanace: $"+getBalance(town));
+					return;
+				}
+			}
+			//Break Apart Town
+			Core.instance.getServer().broadcastMessage(ChatColor.RED+"[Broadcast] "+town.getName()+" has fallen into ruin.");	
+			HTowny.handler.getTownyUniverse().removeTown(town);
+			removePastDue(town);
+			logger.log(Level.WARNING,"  ! Town Fell into Ruin");
+		} catch (IConomyException ex) {
+			Core.log(Level.SEVERE,"Error with upkeep for "+town.getName());
+			logger.log(Level.SEVERE,"Error with upkeep for "+town.getName(),ex);
 		}
-		return true;
 	}
+
 	
 	public static boolean isPastDue(String id) {
 		return Data.pastDue.containsKey(id);
@@ -328,7 +373,9 @@ public class Tax implements CommandExecutor {
 	
 	public static void collectPastDue(Town town, Player who) {
 		Core.send(who,"&2Collecting Past Due for "+town.getName()+":");
-		for (String key: Data.pastDue.keySet()) {
+		Iterator<String> keyIter = Data.pastDue.keySet().iterator();
+		while (keyIter.hasNext()) {
+			String key = keyIter.next();
 			if (key.startsWith(town.getName()+" ")) {
 				Resident res = HTowny.getResident(key.split(" ")[1]);
 				Double amount = Data.pastDue.get(key);
@@ -367,13 +414,13 @@ public class Tax implements CommandExecutor {
 			if (entry.getKey().endsWith(" "+player.getName())) {
 				try {
 					if (HTowny.getResident(player).canPayFromHoldings(entry.getValue())) {
-						logger.log(Level.INFO, player.getName()+" paid past due amt $"+entry.getValue()+" to "+entry.getKey().split(" ")[1]);
-						Core.send(player, "&2Paid past due amt $"+entry.getValue()+" to "+entry.getKey().split(" ")[1]);
+						logger.log(Level.INFO, player.getName()+" paid past due amt $"+entry.getValue()+" to "+entry.getKey().split(" ")[0]);
+						Core.send(player, "&2Paid past due amt $"+entry.getValue()+" to "+entry.getKey().split(" ")[0]);
 						HTowny.getResident(player).collect(entry.getValue());
 						HTowny.getTown(entry.getKey().split(" ")[1]).pay(entry.getValue());
 						Data.pastDue.remove(entry.getKey());
 					} else {
-						Core.send(player, "&2Unable to pay past due amt $"+entry.getValue()+" to "+entry.getKey().split(" ")[1]);
+						Core.send(player, "&2Unable to pay past due amt $"+entry.getValue()+" to "+entry.getKey().split(" ")[0]);
 					}
 				} catch (IConomyException ex) {
 				}
